@@ -19,7 +19,11 @@ fip <- read_excel('D:/Data/cadre_harmonise_caf_ipc_Mar24-copy2.xlsx')
 fip <- fip %>% 
   filter(adm0_name %in% c("Burkina Faso", "Niger", "Mali"))
 fip <- fip %>% 
+  filter(exercise_label %in% c("Sep-Dec"))
+
+fip <- fip %>% 
   filter(chtype %in% c("current"))
+unique(fip$exercise_year)
 
 fip$adm2_name <- toupper(fip$adm2_name)
 fip$adm1_name <- toupper(fip$adm1_name)
@@ -27,31 +31,34 @@ fip$adm1_name <- toupper(fip$adm1_name)
 
 
 #get mali shapefile
-Mali_adm2 <- sf::st_as_sf(geodata::gadm(country = 'MALI',level = 2, path = path))
-Niger_adm2 <- sf::st_as_sf(geodata::gadm(country = 'NIGER',level = 2, path = path))
-BF_adm2 <- sf::st_as_sf(geodata::gadm(country = 'BURKINA FASO',level = 2, path = path))
+Mali_adm1 <- sf::st_as_sf(geodata::gadm(country = 'MALI',level = 1, path = path))
+Niger_adm1 <- sf::st_as_sf(geodata::gadm(country = 'NIGER',level = 1, path = path))
+BF_adm1 <- sf::st_as_sf(geodata::gadm(country = 'BURKINA FASO',level = 1, path = path))
 
-merged_shapefile <- rbind(BF_adm2, Mali_adm2, Niger_adm2)
-plot(merged_shapefile['NAME_2'])
+merged_shapefile <- rbind(BF_adm1, Mali_adm1, Niger_adm1)
 
-merged_shapefile <- merged_shapefile[c('NAME_1','NAME_2')]
+#plot(merged_shapefile['NAME_1'])
+
+
+merged_shapefile <- merged_shapefile[c('NAME_1')]
 
 
 
 #rename admin 2 to remove accents
-merged_shapefile$NAME_2 <- stringi::stri_trans_general(str = merged_shapefile$NAME_2, id = "Latin-ASCII")
+merged_shapefile$NAME_1 <- stringi::stri_trans_general(str = merged_shapefile$NAME_1, id = "Latin-ASCII")
 
 
 fip$FIP <- fip$FIP * 100
-fip$FIP<- round(fip$FIP)
-#merge df and shapefile
-merged_shapefile$NAME_2 <- toupper(merged_shapefile$NAME_2)
+fip$FIP<- round(fip$FIP,2)
+
+#merged_shapefile$NAME_2 <- toupper(merged_shapefile$NAME_2)
 merged_shapefile$NAME_1 <- toupper(merged_shapefile$NAME_1)
+
 #Check naming fidelity
 nameCheck <- function(admin, df, level){
-  if(level==2){
-    a <- sort(unique(admin$NAME_2))
-    b <- sort(unique(df$NAME_2))
+  if(level==1){
+    a <- sort(unique(admin$NAME_1))
+    b <- sort(unique(df$NAME_1))
     tt=b %in% a
     print(b[!tt])
   }
@@ -64,33 +71,44 @@ nameCheck <- function(admin, df, level){
   
 }
 
-
 colnames(fip)[colnames(fip) == "adm1_name"] <- "NAME_1"
 colnames(fip)[colnames(fip) == "adm2_name"] <- "NAME_2"
+colnames(fip)[colnames(fip) == "reference_year"] <- "Year"
 
-fip_mean <- fip[,c("NAME_2", "FIP" )]
-names(fip_mean)[1] <- "NAME_2" #Doing this in order to ensure a better match after discussion with Carolina
+fip_mean <- fip[,c("NAME_1",'Year', "FIP" )]
+
+nameCheck(merged_shapefile, fip, 1)
 
 
 
-# stop here
+i <- fip_mean$NAME_1
+fip_mean$NAME_1[i=="HAUTS-BASSINS"] <- "HAUT-BASSINS"
+fip_mean$NAME_1[i=="PLATEAU CENTRAL"] <- "PLATEAU-CENTRAL"
+fip_mean$NAME_1[i=="TILLABERI"] <- "TILLABERY"
+fip_mean$NAME_1[i=="TOMBOUCTOU"] <- "TIMBUKTU"
 
-#fip_mean <- aggregate(FIP~NAME_2, data=fip, mean, na.rm=T)
 
-#i <- fip_mean$NAME_3
-#fip_mean$NAME_3[i=="TIN-ESSAKO"] <- "TINESSAKO"
-#fip_mean$NAME_3[i=="KORO"] <- "KORO-CENTRAL"
-#fip_mean$NAME_3[i=="BANAMBA"] <- "BANAMBA-CENTRAL"
-nameCheck(merged_shapefile, fip_mean, 2)
-fip_merg <- merge(merged_shapefile[,'NAME_2'], fip_mean[,c('FIP', 'NAME_2')], by="NAME_2")
+nameCheck(merged_shapefile, fip_mean, 1)
 
+dF <- fip_mean %>%
+  group_by(NAME_1, Year) %>%
+  summarise(FIP = round(mean(FIP, na.rm = TRUE),2))
+
+
+fip_merg <- merge(merged_shapefile, dF, by=c("NAME_1"))
+
+fip_merg <- fip_merg %>% 
+  filter(Year %in% c("2017"))
+
+plot(fip_merg['FIP'])
 
 #read conflict data
-conflict <- sf::st_read("/Users/yacoub/Library/CloudStorage/OneDrive-CGIAR/SA_Team/Data/CSO/MLI/clim_conflict_ips_overlays (ACCLED-2017-2022).geojson")
+conflict <- sf::st_read("D:/OneDrive - CGIAR/1-Scripts/WFP/WFP 2/Data/Conflicts/clim_conflict_ips_overlays_2017.geojson")
 names(conflict)
 plot(conflict['FATALITIES'])
 unique(conflict$intersect_conf_clim)
 reLabel <- function(conf){
+  conf=conflict
   temp <- conf[conf$conflict_clust_label=="High conflict"  ,]
   temp
   temp <- st_intersection(temp, merged)
