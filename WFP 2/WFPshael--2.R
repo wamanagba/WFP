@@ -104,14 +104,15 @@ plot(fip_merg['FIP'])
 
 #read conflict data
 conflict <- sf::st_read("D:/OneDrive - CGIAR/1-Scripts/WFP/WFP 2/Data/Conflicts/clim_conflict_ips_overlays_2017.geojson")
+
 names(conflict)
-plot(conflict['FATALITIES'])
+plot(conflict['m_events'])
 unique(conflict$intersect_conf_clim)
+conf = conflict
 reLabel <- function(conf){
-  conf=conflict
-  temp <- conf[conf$conflict_clust_label=="High conflict"  ,]
+  temp <- conf[conf$label=="High conflict"  ,]
   temp
-  temp <- st_intersection(temp, merged)
+  temp <- st_intersection(temp, merged_shapefile)
   unique(temp$intersect_conf_clim)
   i <- temp$intersect_conf_clim
   temp$intersect_conf_clim[i=="High conflict-[High levels of precipitation/Low levels of drought stress]"] <-
@@ -125,12 +126,13 @@ reLabel <- function(conf){
   temp$clust <- as.factor(temp$clust)
   return(temp)
 }
+
 conflict_mali <- reLabel(conflict)
-plot(conflict_mali['intersect_conf_clim'])
+x11();plot(conflict_mali['intersect_conf_clim'])
 unique(conflict_mali$intersect_conf_clim)
-unique(conflict$conflict_clust_label)
+unique(conflict$label)
 all_cluster <- function(conf){
-  county_conf <- st_intersection(conf, merged)
+  county_conf <- st_intersection(conf, merged_shapefile)
   i <- county_conf$intersect_conf_clim
   county_conf$intersect_conf_clim[i=="High conflict-[High levels of precipitation/Low levels of drought stress]"] <-
     "High conflict + Low drought stress" 
@@ -173,12 +175,12 @@ all_cluster <- function(conf){
 
 conflict_all <- all_cluster(conflict)
 
-county_conf <- conflict[conflict$conflict_clust_label==c("High conflict","Moderate conflict")  ,]
-county_conf <- st_intersection(county_conf, merged)
+county_conf <- conflict[conflict$label==c("High conflict","Moderate conflict")  ,]
+county_conf <- st_intersection(county_conf, merged_shapefile)
 
-unique(county_conf$conflict_clust_label)
+unique(county_conf$label)
 conf_no_limited <- function(conf){
-  county_conf <- conf[conf$conflict_clust_label != "Limited conflict"  ,]
+  county_conf <- conf[conf$label != "Limited conflict"  ,]
   #county_conf <- st_intersection(county_conf, merged)
   i <- county_conf$intersect_conf_clim
   county_conf$intersect_conf_clim[i=="High conflict-[High levels of precipitation/Low levels of drought stress]"] <-
@@ -219,7 +221,9 @@ no_limited_label <- c("High conflict + High drought stress", "High conflict + Mo
                       "High conflict + Low drought stress", "Moderate conflict + High drought stress", "Moderate conflict + Moderate-High drought stress",
                       "Moderate conflict + Moderate-Low drought stress", "Moderate conflict + Low drought stress" )
 unique(conflict_all$clust)
-plot(conflict_all['intersect_conf_clim'])
+
+dev.off()
+x11();plot(conflict_all['intersect_conf_clim'])
 label <- c("High conflict + Moderate-High drought","High conflict + Low drought", 
            "Moderate conflict + High drought", "Moderate conflict + Moderate-High drought",
            "Moderate conflict + Moderate-Low drought", "Moderate conflict + Low drought",
@@ -237,7 +241,7 @@ map <- tm_shape(fip_merg)+
           legend.show = T, labels=no_limited_label)+
   tm_shape(merged_shapefile)+
   tm_borders(col="black",lwd=0.01)+
-  tm_text("NAME_2", size = 0.6, remove.overlap = TRUE, col ='black')+
+  tm_text("NAME_1", size = 0.6, remove.overlap = TRUE, col ='black')+
   tm_compass(type = "8star", size=4,position = c("right", "bottom")) +
   tm_scale_bar(breaks = c(0, 50, 100), text.size = 1.5, 
                position = c("right", "bottom"))+
@@ -256,9 +260,9 @@ map <- tm_shape(fip_merg)+
   )
 
 map
-fpath <- '/Users/yacoub/Library/CloudStorage/OneDrive-CGIAR/SA_Team/Data/Mali/Results/'
+fpath <- 'D:/OneDrive - CGIAR/1-Scripts/WFP/WFP 2/Products/'
 tmap_save(map, dpi= 300,  width=11.7, height =8.3, units="in",
-          filename=paste0(fpath, "FIP_mali.png"))
+          filename=paste0(fpath, "FIP_AES.png"))
 
 
 #plotting FCS
