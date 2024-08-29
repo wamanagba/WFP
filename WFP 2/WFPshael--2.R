@@ -34,8 +34,13 @@ fip$adm1_name <- toupper(fip$adm1_name)
 Mali_adm1 <- sf::st_as_sf(geodata::gadm(country = 'MALI',level = 1, path = path))
 Niger_adm1 <- sf::st_as_sf(geodata::gadm(country = 'NIGER',level = 1, path = path))
 BF_adm1 <- sf::st_as_sf(geodata::gadm(country = 'BURKINA FASO',level = 1, path = path))
-
 merged_shapefile <- rbind(BF_adm1, Mali_adm1, Niger_adm1)
+
+Mali_adm0 <- sf::st_as_sf(geodata::gadm(country = 'MALI',level = 0, path = path))
+Niger_adm0 <- sf::st_as_sf(geodata::gadm(country = 'NIGER',level = 0, path = path))
+BF_adm0 <- sf::st_as_sf(geodata::gadm(country = 'BURKINA FASO',level = 0, path = path))
+
+Boundaries <- rbind(BF_adm0, Mali_adm0, Niger_adm0)
 
 #plot(merged_shapefile['NAME_1'])
 
@@ -54,6 +59,7 @@ fip$FIP<- round(fip$FIP,2)
 #merged_shapefile$NAME_2 <- toupper(merged_shapefile$NAME_2)
 merged_shapefile$NAME_1 <- toupper(merged_shapefile$NAME_1)
 
+adm2 = merged_shapefile
 #Check naming fidelity
 nameCheck <- function(admin, df, level){
   if(level==1){
@@ -100,113 +106,101 @@ fip_merg <- merge(merged_shapefile, dF, by=c("NAME_1"))
 fip_merg <- fip_merg %>% 
   filter(Year %in% c("2017"))
 
-plot(fip_merg['FIP'])
+#plot(fip_merg['FIP'])
 
 #read conflict data
-conflict <- sf::st_read("D:/OneDrive - CGIAR/1-Scripts/WFP/WFP 2/Data/Conflicts/clim_conflict_ips_overlays_2017.geojson")
+conflict=conflict_2017 <- sf::st_read("D:/OneDrive - CGIAR/1-Scripts/WFP/WFP 2/Data/Conflicts/clim_conflict_ips_overlays_2017.geojson")
+names(conflict_2017)
+#plot(conflict['m_events'])
 
-names(conflict)
-plot(conflict['m_events'])
 unique(conflict$intersect_conf_clim)
-conf = conflict
-reLabel <- function(conf){
-  temp <- conf[conf$label=="High conflict"  ,]
-  temp
-  temp <- st_intersection(temp, merged_shapefile)
-  unique(temp$intersect_conf_clim)
-  i <- temp$intersect_conf_clim
-  temp$intersect_conf_clim[i=="High conflict-[High levels of precipitation/Low levels of drought stress]"] <-
-    "High conflict + Low drought stress"
-  temp$intersect_conf_clim[i=="High conflict-[Moderate-Low levels of precipitation/Moderate-High levels of drought stress]"] <-
-    "High conflict + Moderate-High drought stress"
-  i <- temp$intersect_conf_clim
-  
-  temp$clust[i=="High conflict + Low drought stress"] <- 2
-  temp$clust[i=="High conflict + Moderate-High drought stress"] <- 1
-  temp$clust <- as.factor(temp$clust)
-  return(temp)
-}
+#conf = conflict
 
-conflict_mali <- reLabel(conflict)
-x11();plot(conflict_mali['intersect_conf_clim'])
-unique(conflict_mali$intersect_conf_clim)
-unique(conflict$label)
+
+
+
 all_cluster <- function(conf){
   county_conf <- st_intersection(conf, merged_shapefile)
   i <- county_conf$intersect_conf_clim
-  county_conf$intersect_conf_clim[i=="High conflict-[High levels of precipitation/Low levels of drought stress]"] <-
+  county_conf$intersect_conf_clim[i=="High conflict-[Low levels of drought stress/High precipitation]"] <-
     "High conflict + Low drought stress" 
-  county_conf$intersect_conf_clim[i=="High conflict-[Moderate-Low levels of precipitation/Moderate-High levels of drought stress]"] <-
+  county_conf$intersect_conf_clim[i=="High conflict-[Moderate-Low levels of drought stress/High-Moderate precipitation]"] <-
+    "High conflict + Moderate-Low drought stress"
+  county_conf$intersect_conf_clim[i=="High conflict-[Moderate-High levels of drought stress/Moderate-Low precipitation]" ] <-
     "High conflict + Moderate-High drought stress"
+  county_conf$intersect_conf_clim[i=="High conflict-[High levels of drought stress/Low precipitation]"] <-
+    "High conflict + High drought stress"
   
-  county_conf$intersect_conf_clim[i=="Moderate conflict-[High levels of precipitation/Low levels of drought stress]"] <-
+  
+  county_conf$intersect_conf_clim[i=="Moderate conflict-[Low levels of drought stress/High precipitation]"] <-
     "Moderate conflict + Low drought stress" 
-  county_conf$intersect_conf_clim[i=="Moderate conflict-[High-Moderate levels of precipitation/Moderate-Low levels of drought stress]"] <-
+  county_conf$intersect_conf_clim[i=="Moderate conflict-[Moderate-Low levels of drought stress/High-Moderate precipitation]"] <-
     "Moderate conflict + Moderate-Low drought stress"
-  county_conf$intersect_conf_clim[i=="Moderate conflict-[Moderate-Low levels of precipitation/Moderate-High levels of drought stress]"] <-
+  county_conf$intersect_conf_clim[i=="Moderate conflict-[Moderate-High levels of drought stress/Moderate-Low precipitation]"] <-
     "Moderate conflict + Moderate-High drought stress"
-  county_conf$intersect_conf_clim[i=="Moderate conflict-[Low levels of precipitation/High levels of drought stress]"] <-
+  county_conf$intersect_conf_clim[i=="Moderate conflict-[High levels of drought stress/Low precipitation]"] <-
     "Moderate conflict + High drought stress"
   
-  county_conf$intersect_conf_clim[i=="Limited conflict-[High levels of precipitation/Low levels of drought stress]"] <-
+  county_conf$intersect_conf_clim[i=="Limited conflict-[Low levels of drought stress/High precipitation]"] <-
     "Limited conflict + Low drought stress" 
-  county_conf$intersect_conf_clim[i=="Limited conflict-[High-Moderate levels of precipitation/Moderate-Low levels of drought stress]"] <-
+  county_conf$intersect_conf_clim[i=="Limited conflict-[Moderate-Low levels of drought stress/High-Moderate precipitation]" ] <-
     "Limited conflict + Moderate-Low drought stress"
-  county_conf$intersect_conf_clim[i=="Limited conflict-[Moderate-Low levels of precipitation/Moderate-High levels of drought stress]"] <-
+  county_conf$intersect_conf_clim[i=="Limited conflict-[Moderate-High levels of drought stress/Moderate-Low precipitation]"] <-
     "Limited conflict + Moderate-High drought stress"
-  county_conf$intersect_conf_clim[i=="Limited conflict-[Low levels of precipitation/High levels of drought stress]"] <-
+  county_conf$intersect_conf_clim[i=="Limited conflict-[High levels of drought stress/Low precipitation]"] <-
     "Limited conflict + High drought stress"
+  
   i <- county_conf$intersect_conf_clim
-  county_conf$clust[i=="Limited conflict + Low drought stress"] <- 10
-  county_conf$clust[i=="Limited conflict + Moderate-Low drought stress"] <- 9
-  county_conf$clust[i=="Limited conflict + Moderate-High drought stress"] <- 8
-  county_conf$clust[i=="Limited conflict + High drought stress"] <- 7
+  county_conf$clust[i=="Limited conflict + Low drought stress"] <- 12
+  county_conf$clust[i=="Limited conflict + Moderate-Low drought stress"] <- 11
+  county_conf$clust[i=="Limited conflict + Moderate-High drought stress"] <- 10
+  county_conf$clust[i=="Limited conflict + High drought stress"] <- 9
   
-  county_conf$clust[i=="Moderate conflict + Low drought stress"] <- 6
-  county_conf$clust[i=="Moderate conflict + Moderate-Low drought stress"] <- 5
-  county_conf$clust[i=="Moderate conflict + Moderate-High drought stress"] <- 4
-  county_conf$clust[i=="Moderate conflict + High drought stress"] <- 3
+  county_conf$clust[i=="Moderate conflict + Low drought stress"] <- 8
+  county_conf$clust[i=="Moderate conflict + Moderate-Low drought stress"] <- 7
+  county_conf$clust[i=="Moderate conflict + Moderate-High drought stress"] <- 6
+  county_conf$clust[i=="Moderate conflict + High drought stress"] <- 5
   
-  county_conf$clust[i=="High conflict + Low drought stress"] <- 2
-  county_conf$clust[i=="High conflict + Moderate-High drought stress"] <- 1
+  county_conf$clust[i=="High conflict + Low drought stress"] <- 4
+  county_conf$clust[i=="High conflict + Moderate-Low drought stress"] <- 3
+  county_conf$clust[i=="High conflict + Moderate-High drought stress"] <- 2
+  county_conf$clust[i=="High conflict + High drought stress"] <- 1
   county_conf$clust <- as.factor(county_conf$clust)
   return(county_conf)
 }
 
 conflict_all <- all_cluster(conflict)
 
-county_conf <- conflict[conflict$label==c("High conflict","Moderate conflict")  ,]
-county_conf <- st_intersection(county_conf, merged_shapefile)
-
-unique(county_conf$label)
 conf_no_limited <- function(conf){
   county_conf <- conf[conf$label != "Limited conflict"  ,]
   #county_conf <- st_intersection(county_conf, merged)
   i <- county_conf$intersect_conf_clim
-  county_conf$intersect_conf_clim[i=="High conflict-[High levels of precipitation/Low levels of drought stress]"] <-
+  county_conf$intersect_conf_clim[i=="High conflict-[Low levels of drought stress/High precipitation]"] <-
     "High conflict + Low drought stress" 
-  county_conf$intersect_conf_clim[i=="High conflict-[High-Moderate levels of precipitation/Moderate-Low levels of drought stress]"] <-
-    "High conflict + Moderate-Low drought stress" 
-  county_conf$intersect_conf_clim[i=="High conflict-[Moderate-Low levels of precipitation/Moderate-High levels of drought stress]"] <-
+  county_conf$intersect_conf_clim[i=="High conflict-[Moderate-Low levels of drought stress/High-Moderate precipitation]"] <-
+    "High conflict + Moderate-Low drought stress"
+  county_conf$intersect_conf_clim[i=="High conflict-[Moderate-High levels of drought stress/Moderate-Low precipitation]" ] <-
     "High conflict + Moderate-High drought stress"
-  county_conf$intersect_conf_clim[i=="High conflict-[Low levels of precipitation/High levels of drought stress]"] <-
-    "High conflict + High drought stress" 
+  county_conf$intersect_conf_clim[i=="High conflict-[High levels of drought stress/Low precipitation]"] <-
+    "High conflict + High drought stress"
   
   
-  county_conf$intersect_conf_clim[i=="Moderate conflict-[High levels of precipitation/Low levels of drought stress]"] <-
+  county_conf$intersect_conf_clim[i=="Moderate conflict-[Low levels of drought stress/High precipitation]"] <-
     "Moderate conflict + Low drought stress" 
-  county_conf$intersect_conf_clim[i=="Moderate conflict-[High-Moderate levels of precipitation/Moderate-Low levels of drought stress]"] <-
+  county_conf$intersect_conf_clim[i=="Moderate conflict-[Moderate-Low levels of drought stress/High-Moderate precipitation]"] <-
     "Moderate conflict + Moderate-Low drought stress"
-  county_conf$intersect_conf_clim[i=="Moderate conflict-[Moderate-Low levels of precipitation/Moderate-High levels of drought stress]"] <-
+  county_conf$intersect_conf_clim[i=="Moderate conflict-[Moderate-High levels of drought stress/Moderate-Low precipitation]"] <-
     "Moderate conflict + Moderate-High drought stress"
-  county_conf$intersect_conf_clim[i=="Moderate conflict-[Low levels of precipitation/High levels of drought stress]"] <-
+  county_conf$intersect_conf_clim[i=="Moderate conflict-[High levels of drought stress/Low precipitation]"] <-
     "Moderate conflict + High drought stress"
   
   i <- county_conf$intersect_conf_clim
+
   county_conf$clust[i=="Moderate conflict + Low drought stress"] <- 8
   county_conf$clust[i=="Moderate conflict + Moderate-Low drought stress"] <- 7
   county_conf$clust[i=="Moderate conflict + Moderate-High drought stress"] <- 6
   county_conf$clust[i=="Moderate conflict + High drought stress"] <- 5
+  
   county_conf$clust[i=="High conflict + Low drought stress"] <- 4
   county_conf$clust[i=="High conflict + Moderate-Low drought stress"] <- 3
   county_conf$clust[i=="High conflict + Moderate-High drought stress"] <- 2
@@ -216,53 +210,78 @@ conf_no_limited <- function(conf){
 }
 
 conflict__no_limited <- conf_no_limited(conflict)
-unique(conflict__no_limited$intersect_conf_clim)
+#unique(conflict__no_limited$intersect_conf_clim)
 no_limited_label <- c("High conflict + High drought stress", "High conflict + Moderate-High drought stress", "High conflict + Moderate-Low drought stress",
                       "High conflict + Low drought stress", "Moderate conflict + High drought stress", "Moderate conflict + Moderate-High drought stress",
                       "Moderate conflict + Moderate-Low drought stress", "Moderate conflict + Low drought stress" )
-unique(conflict_all$clust)
+unique(conflict__no_limited$clust)
 
-dev.off()
-x11();plot(conflict_all['intersect_conf_clim'])
-label <- c("High conflict + Moderate-High drought","High conflict + Low drought", 
-           "Moderate conflict + High drought", "Moderate conflict + Moderate-High drought",
-           "Moderate conflict + Moderate-Low drought", "Moderate conflict + Low drought",
-           "Limited conflict + High drought", "Limited conflict + Moderate-High drought ",
-           "Limited conflict + Moderate-Low drought", "Limited conflict + Low drought")
-high_conf_label <- c("High conflict + Moderate-High drought stress","High conflict + Low drought stress")
 
 #plotting CONFLICT FIP
 #=================================================================
-tmap_mode("plot")
+
+
 map <- tm_shape(fip_merg)+
-  tm_fill(col="FIP", title="Food Insecure Population (%)",style = "cont", palette = mako(10,direction	=-1),legend.show = T)+
+  tm_fill(col="FIP", title="Food Insecure Population (%)", style = "cont", palette = mako(10, direction = -1), legend.show = T)+
   tm_shape(conflict__no_limited) +
-  tm_fill(col= "clust", palette="-YlOrRd", title="Conflict-Climate Intersection",
+  tm_fill(col= "clust", palette="-YlOrRd", title="Conflict-Climate Intersection", alpha=0.7,
           legend.show = T, labels=no_limited_label)+
-  tm_shape(merged_shapefile)+
-  tm_borders(col="black",lwd=0.01)+
-  tm_text("NAME_1", size = 0.6, remove.overlap = TRUE, col ='black')+
-  tm_compass(type = "8star", size=4,position = c("right", "bottom")) +
-  tm_scale_bar(breaks = c(0, 50, 100), text.size = 1.5, 
-               position = c("right", "bottom"))+
-  tm_layout(legend.outside=F, 
-            legend.text.size = 1.1,
+  tm_shape(adm2)+
+  tm_borders(col="black", lwd=.4)+
+  tm_text("NAME_1", size = 0.5, remove.overlap = TRUE, col ='black', fontface = 2)+
+  #tm_shape(Boundaries) +
+  #tm_borders(col="blue", lwd=2, lty="dashed") +
+  tm_shape(BF_adm0) +
+  tm_borders(lty = "dashed", col = "black", lwd = 1) +
+  tm_shape(Mali_adm0) +
+  tm_borders(col = "red", lwd = 1, lty = "dotdash") +  # Changed to a thicker, solid line for prominence
+  tm_shape(Niger_adm0) +
+  tm_borders(lty = "twodash", col = "blue", lwd = 1) +
+  tm_add_legend(type = "fill", col = NA, border.col = NA,lwd = 8, title = " ") + # Add title for borders legend
+  tm_add_legend(type = "line", lty="twodash",col = "black", lwd = 1.5, title = "Burkina Faso border") +
+  tm_add_legend(type = "line", lty = "dotdash", col = "red", lwd = 1.5, title = "Mali border") +  # Updated legend
+  tm_add_legend(type = "line", lty = "dashed", col = "blue", lwd = 1.5, title = "Niger border") +
+  tm_compass(type = "8star", size=3, position = c(.92, .13)) +
+  tm_scale_bar(breaks = c(0, 50, 100), text.size = 4, position = c(.929, 0.08))+
+  tm_layout(legend.outside = F, 
+            legend.text.size = .6,
             legend.text.color = "black",
-            legend.title.size= 1.2,
+            legend.title.size = 1,
             legend.title.color = "black",
             legend.title.fontface = 2,
-            legend.frame=F,
-            asp=1.3,
+            legend.frame = F,
+            asp = 1.3,
             legend.position = c("left", "top"), 
             legend.width = 0.5,
-            #bg.color = 'grey85',
-            inner.margins = c(0,0.05,0,0.05)
+            inner.margins = c(0, 0.05, 0, 0.05)
   )
-
 map
+
+
+
 fpath <- 'D:/OneDrive - CGIAR/1-Scripts/WFP/WFP 2/Products/'
-tmap_save(map, dpi= 300,  width=11.7, height =8.3, units="in",
-          filename=paste0(fpath, "FIP_AES.png"))
+tmap_save(map, dpi= 300,  width=11, height =8, units="in",
+          filename=paste0(fpath, "FIP.png"))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #plotting FCS
