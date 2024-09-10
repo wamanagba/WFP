@@ -101,20 +101,25 @@ dF <- fip_mean %>%
   summarise(FIP = round(mean(FIP, na.rm = TRUE),2))
 
 
-fip_merg <- merge(merged_shapefile, dF, by=c("NAME_1"))
+fip_merg0 <- merge(merged_shapefile, dF, by=c("NAME_1"))
 
-fip_merg <- fip_merg %>% 
-  filter(Year %in% c("2017"))
+fip_merg <- fip_merg0 %>% 
+  filter(Year %in% c("2022"))
 
 #plot(fip_merg['FIP'])
 
 #read conflict data
 conflict=conflict_2017 <- sf::st_read("D:/OneDrive - CGIAR/1-Scripts/WFP/WFP 2/Data/Conflicts/clim_conflict_ips_overlays_2017.geojson")
+conflict=conflict_2018 <- sf::st_read("D:/OneDrive - CGIAR/1-Scripts/WFP/WFP 2/Data/Conflicts/clim_conflict_ips_overlays_2018.geojson")
+conflict=conflict_2019 <- sf::st_read("D:/OneDrive - CGIAR/1-Scripts/WFP/WFP 2/Data/Conflicts/clim_conflict_ips_overlays_2019.geojson")
+conflict=conflict_2020 <- sf::st_read("D:/OneDrive - CGIAR/1-Scripts/WFP/WFP 2/Data/Conflicts/clim_conflict_ips_overlays_2020.geojson")
+conflict=conflict_2021 <- sf::st_read("D:/OneDrive - CGIAR/1-Scripts/WFP/WFP 2/Data/Conflicts/clim_conflict_ips_overlays_2021.geojson")
+conflict=conflict_2022 <- sf::st_read("D:/OneDrive - CGIAR/1-Scripts/WFP/WFP 2/Data/Conflicts/clim_conflict_ips_overlays_2022.geojson")
 names(conflict_2017)
-#plot(conflict['m_events'])
+
 
 unique(conflict$intersect_conf_clim)
-#conf = conflict
+
 
 
 
@@ -221,22 +226,189 @@ unique(conflict__no_limited$clust)
 #=================================================================
 
 
+map <- tm_shape(fip_merg) +
+  tm_fill(col = "FIP", 
+          title = "Food Insecure Population (%)", 
+          style = "cont", 
+          breaks = seq(0, 40, by = 5),  # Set breaks from 0 to 30 with steps of 5
+          palette = mako(10, direction = -1), 
+          legend.show = TRUE) +
+  tm_shape(conflict__no_limited) +
+  tm_fill(col = "clust", 
+          palette = "-YlOrRd", 
+          title = "Conflict-Climate Intersection", 
+          alpha = 0.7,
+          legend.show = TRUE, 
+          labels = no_limited_label) +
+  tm_shape(adm2) +
+  tm_borders(col = "grey", lwd = 0.9) +
+  tm_text("NAME_1", 
+          size = 0.5, 
+          remove.overlap = TRUE, 
+          col = 'black', 
+          fontface = 2) +
+  tm_shape(Mali_adm0) +
+  tm_borders(col = "red", lwd = 1, lty = "dotdash") +
+  tm_shape(Niger_adm0) +
+  tm_borders(lty = "twodash", col = "blue", lwd = 1) +
+  tm_shape(BF_adm0) +
+  tm_borders(lty = "dashed", col = "black", lwd = 1) +
+  tm_add_legend(type = "fill", col = NA, border.col = NA, lwd = 8, title = " ") +
+  tm_add_legend(type = "line", lty = "twodash", col = "black", lwd = 1.5, title = "Burkina Faso border") +
+  tm_add_legend(type = "line", lty = "dotdash", col = "red", lwd = 1.5, title = "Mali border") +
+  tm_add_legend(type = "line", lty = "dashed", col = "blue", lwd = 1.5, title = "Niger border") +
+  tm_compass(type = "8star", size = 3, position = c(.92, .13)) +
+  tm_scale_bar(breaks = c(0, 50, 100), text.size = 4, position = c(.929, 0.08)) +
+  tm_layout(legend.outside = FALSE, 
+            legend.text.size = 0.6,
+            legend.text.color = "black",
+            legend.title.size = 1,
+            legend.title.color = "black",
+            legend.title.fontface = 2,
+            legend.frame = FALSE,
+            asp = 1.3,
+            legend.position = c("left", "top"), 
+            legend.width = 0.5,
+            inner.margins = c(0, 0.05, 0, 0.05))
+
+map
+
+
+
+fpath <- 'D:/OneDrive - CGIAR/1-Scripts/WFP/WFP 2/Products/'
+tmap_save(map, dpi= 300,  width=11, height =8, units="in",
+          filename=paste0(fpath, "FIP2022.png"))
+
+
+
+
+### FSC data proccessing
+path <- 'D:/OneDrive - CGIAR/1-Scripts/WFP/WFP 2/Data/FCS/'
+df1 <- read_sav(paste0(path,'ALL_2018_2023_Data_Fusion_PDM_Resilience.sav'))
+
+temp <- df1 %>% 
+  filter(ADMIN0Name %in% c("BURKINA FASO", "MALI", "NIGER"))
+temp$ADMIN1Name <- toupper(temp$ADMIN1Name)
+temp$ADMIN2Name <- toupper(temp$ADMIN2Name)
+
+# remplacer les valeurs manquante dans la colone ADMIN2Name
+#Burkina Faso
+for (i in 1:length(temp$ADMIN2Name)) {
+  if(temp$ADMIN2Name[i]=="SENO"){temp$ADMIN1Name[i]="SAHEL"}
+  if(temp$ADMIN2Name[i]=="ZONDOMA" || temp$ADMIN2Name[i]=="YATENGA" || temp$ADMIN2Name[i]=="PASSORE"){temp$ADMIN1Name[i]="NORD"}
+  if(temp$ADMIN2Name[i]=="SANMATENGA" || temp$ADMIN2Name[i]=="NAMENTENGA"){temp$ADMIN1Name[i]="CENTRE-NORD"}
+  if(temp$ADMIN2Name[i]=="GNAGNA" || temp$ADMIN2Name[i]=="GNAGNA"){temp$ADMIN1Name[i]="EST"}
+}
+
+#Niger
+for (i in 1:length(temp$ADMIN2Name)) {
+  if(temp$ADMIN2Name[i]=="VILLE DE M"|| temp$ADMIN2Name[i]== "MAYAHI" || temp$ADMIN2Name[i]=="DAKORO" || temp$ADMIN2Name[i]=="MADAROUNFA" || temp$ADMIN2Name[i]=="TESSAOUA" || temp$ADMIN2Name[i]=="GUIDAN ROU" || temp$ADMIN2Name[i]=="GAZAOUA"){temp$ADMIN1Name[i]="MARADI"}
+  if(temp$ADMIN2Name[i]=="BELBEDJI" || temp$ADMIN2Name[i]=="MAGARIA" || temp$ADMIN2Name[i]=="MIRRIAH" || temp$ADMIN2Name[i]=="KANTCHE"){temp$ADMIN1Name[i]="ZINDER"}
+  if(temp$ADMIN2Name[i]=="ABALAK" || temp$ADMIN2Name[i]=="BOUZA"){temp$ADMIN1Name[i]="TAHOUA"}
+}
+
+#Mali
+i <- temp$ADMIN1Name 
+temp$ADMIN1Name[i=="TOMBOUTOU" | i=="TIMBUKTU" ] <- "TIMBUKTU"
+temp$ADMIN1Name[i=="TOMBOUCTOU"] <- "TIMBUKTU"
+temp$ADMIN1Name[i=="MENAKA"] <- "GAO"
+temp$ADMIN1Name[i=="BADIANGARA"] <- "BANDIAGARA"
+temp$ADMIN1Name[i=="BARAOUELI"] <- "BAROUELI"
+temp$ADMIN1Name[i=="GOURMA_RHAROUS"] <- "GOURMA-RHAROUS"
+temp$ADMIN1Name[i=="NIAFOUNKE"] <- "NIAFUNKE"
+temp$ADMIN1Name[i=="TIN ESSAKO"] <- "TIN-ESSAKO" 
+temp$ADMIN1Name[i=="TENENKOUN"] <- "TENENKOU" 
+
+#Burkina Faso
+temp$ADMIN1Name[i=="CENTRE_NORD" | i=="CENTRNORD" ] <- "CENTRE-NORD"
+temp$ADMIN1Name[i=="PLATEAU CENTRAL"] <- "PLATEAU-CENTRAL"
+temp$ADMIN1Name[i=="PLATEAU CENTRAL"] <- "PLATEAU-CENTRAL"
+temp$ADMIN1Name[i=="HAUTS-BASSINS"] <- "HAUTS-BASSINS"
+
+#Niger
+temp$ADMIN1Name[i=="TILLABERI"] <- "TILLABERY"
+
+fcs_mean <- aggregate(FCS~YEAR+ADMIN1Name, data=temp,mean, na.rm=T)
+names(fcs_mean)[2] <- "NAME_1"
+Year=2023
+fcs_mean$YEAR= as.numeric(fcs_mean$YEAR)
+fcs_mean <- fcs_mean[fcs_mean$YEAR <= Year, ]
+fcs_mean <- fcs_mean[fcs_mean$NAME_1 != '', ]
+fcs_mean <- aggregate(FCS~NAME_1, data=fcs_mean,mean, na.rm=T)
+
+adm2 = merged_shapefile
+
+
+
+merged <- merge(adm2, fcs_mean, by="NAME_1", all=TRUE)
+
+
+#filtered_merged <- filtered_merged[!is.na(filtered_merged$NAME_1), ]
+# Supprimer les lignes où NAME_1 est NA
+
+
+#plot(filtered_merged['FCS'])
+#plotting FCS
+#=================================================================
+tmap_mode("plot")
+map <- tm_shape(merged)+
+  tm_fill(col="FCS", title="FCS",style = "cont", palette = viridis(100,direction	=-1),legend.show = T)+
+  tm_shape(conflict__no_limited) +
+  tm_fill(col= "clust", palette="-YlOrRd", title="Conflict-Climate Intersection",
+          legend.show = T, labels=no_limited_label)+
+  tm_shape(adm2)+
+  tm_borders(col="black",lwd=0.5)+
+  tm_text("NAME_1", size = 0.7, remove.overlap = TRUE, col ='white')+
+  tm_shape(Mali_adm0) +
+  tm_borders(col = "red", lwd = 2, lty = "dotdash") +  # Changed to a thicker, solid line for prominence
+  tm_shape(Niger_adm0) +
+  tm_borders(lty = "twodash", col = "blue", lwd = 2) +
+  tm_shape(BF_adm0) +
+  tm_borders(lty = "dashed", col = "black", lwd = 2) +
+  tm_add_legend(type = "fill", col = NA, border.col = NA,lwd = 8, title = " ") + # Add title for borders legend
+  tm_add_legend(type = "line", lty="twodash",col = "black", lwd = 1.5, title = "Burkina Faso border") +
+  tm_add_legend(type = "line", lty = "dotdash", col = "red", lwd = 1.5, title = "Mali border") +  # Updated legend
+  tm_add_legend(type = "line", lty = "dashed", col = "blue", lwd = 1.5, title = "Niger border") +
+  tm_compass(type = "8star", size=4,position = c("right", "bottom")) +
+  tm_scale_bar(breaks = c(0, 50, 100), text.size = 1.5, 
+               position = c("right", "bottom"))+
+  tm_layout(legend.outside=F, 
+            legend.text.size = 1,
+            legend.text.color = "black",
+            legend.title.size= 1,
+            legend.title.color = "black",
+            legend.title.fontface = 2,
+            legend.frame=F,
+            asp=1.3,
+            legend.position = c("left", "top"), 
+            legend.width = 0.5,
+            #bg.color = 'grey85',
+            inner.margins = c(0,0.05,0,0.05)
+  )
+
+map
+fpath="D:/OneDrive - CGIAR/1-Scripts/WFP/WFP 2/Products/FCS/"
+tmap_save(map, dpi= 300,  width=11, height =8, units="in",
+          filename=paste0(fpath, "FCS.png"))
+
+
+
+
+
 map <- tm_shape(fip_merg)+
   tm_fill(col="FIP", title="Food Insecure Population (%)", style = "cont", palette = mako(10, direction = -1), legend.show = T)+
   tm_shape(conflict__no_limited) +
   tm_fill(col= "clust", palette="-YlOrRd", title="Conflict-Climate Intersection", alpha=0.7,
           legend.show = T, labels=no_limited_label)+
   tm_shape(adm2)+
-  tm_borders(col="black", lwd=.4)+
+  tm_borders(col="grey", lwd=.9)+
   tm_text("NAME_1", size = 0.5, remove.overlap = TRUE, col ='black', fontface = 2)+
-  #tm_shape(Boundaries) +
-  #tm_borders(col="blue", lwd=2, lty="dashed") +
-  tm_shape(BF_adm0) +
-  tm_borders(lty = "dashed", col = "black", lwd = 1) +
   tm_shape(Mali_adm0) +
   tm_borders(col = "red", lwd = 1, lty = "dotdash") +  # Changed to a thicker, solid line for prominence
   tm_shape(Niger_adm0) +
   tm_borders(lty = "twodash", col = "blue", lwd = 1) +
+  tm_shape(BF_adm0) +
+  tm_borders(lty = "dashed", col = "black", lwd = 1) +
   tm_add_legend(type = "fill", col = NA, border.col = NA,lwd = 8, title = " ") + # Add title for borders legend
   tm_add_legend(type = "line", lty="twodash",col = "black", lwd = 1.5, title = "Burkina Faso border") +
   tm_add_legend(type = "line", lty = "dotdash", col = "red", lwd = 1.5, title = "Mali border") +  # Updated legend
@@ -259,41 +431,16 @@ map
 
 
 
-fpath <- 'D:/OneDrive - CGIAR/1-Scripts/WFP/WFP 2/Products/'
-tmap_save(map, dpi= 300,  width=11, height =8, units="in",
-          filename=paste0(fpath, "FIP.png"))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #plotting FCS
 #=================================================================
 tmap_mode("plot")
 map <- tm_shape(merged)+
-  tm_fill(col="FCS", title="FCS",style = "cont", palette = viridis(100,direction	=-1),legend.show = T)+
+  tm_fill(col="FCS", title="FCS",style = "cont",alpha = 0.7, palette = viridis(100,direction	=-1),legend.show = T)+
   tm_shape(conflict__no_limited) +
   tm_fill(col= "clust", palette="-YlOrRd", title="Conflict-Climate Intersection",
           legend.show = T, labels=no_limited_label)+
   tm_shape(merged_shapefile)+
-  tm_borders(col="black",lwd=0.01)+
+  tm_borders(col="black",lwd=0.1)+
   tm_text("NAME_1", size = 0.7, remove.overlap = TRUE, col ='white')+
   tm_compass(type = "8star", size=4,position = c("right", "bottom")) +
   tm_scale_bar(breaks = c(0, 50, 100), text.size = 1.5, 
