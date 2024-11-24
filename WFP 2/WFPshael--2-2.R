@@ -10,7 +10,7 @@ library("viridis")
 
 library(tidyr)
 library(dplyr)
-year = 2020
+year = 2024
 path <- 'D:/Data/'
 
 fip <- read_excel('D:/Data/cadreHarmonise2020-2024.xlsx')
@@ -103,8 +103,7 @@ fip_merg <- fip_merg0 %>%
 
 YearC=year-1
 conflict <- sf::st_read(paste0("D:/OneDrive - CGIAR/1-Scripts/WFP/WFP 2/Data/Conflicts/clim_conflict_ips_overlays_",YearC,".geojson"))
-
-
+colnames(conflict)[colnames(conflict) == "conflict_clust_label"] <- "label"
 
 
 #conflict=conflict_2019 <- sf::st_read("D:/OneDrive - CGIAR/1-Scripts/WFP/WFP 2/Data/Conflicts/clim_conflict_ips_overlays_2019.geojson")
@@ -114,7 +113,7 @@ conflict <- sf::st_read(paste0("D:/OneDrive - CGIAR/1-Scripts/WFP/WFP 2/Data/Con
 #names(conflict_2017)
 
 
-#unique(conflict$intersect_conf_clim)
+unique(conflict$intersect_conf_clim)
 
 
 
@@ -238,7 +237,7 @@ map <- tm_shape(fip_merg) +
   tm_fill(col = "FIP", 
           title = "Food Insecure Population (%)", 
           style = "cont", 
-          breaks = seq(0, 50, by = 5),  # Set breaks from 0 to 30 with steps of 5
+          breaks = seq(0, 70, by = 10),  # Set breaks from 0 to 30 with steps of 5
           palette = mako(10, direction = -1), 
           legend.show = TRUE) +
   tm_shape(conflict__no_limited) +
@@ -281,9 +280,9 @@ map <- tm_shape(fip_merg) +
 
 map
 
+map
 
-
-fpath <- 'D:/OneDrive - CGIAR/1-Scripts/WFP/WFP 2/Products/FIP/FIP_final/'
+fpath <- 'D:/OneDrive - CGIAR/1-Scripts/WFP/WFP 2/Products/FIP/Final_lat/'
 tmap_save(map, dpi= 300,  width=11, height =8, units="in",
           filename=paste0(fpath, paste0("FIP_",year,".png")))
 
